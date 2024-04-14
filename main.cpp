@@ -3,69 +3,62 @@
 #include <windows.h>
 #include <conio.h>
 #include <time.h>
-#include "ball.h"
-#include "pointF.h"
-#include"scanpic.h"
 
-clock_t  Begin, End;
+#include "ball.h"
+#include "movecursor.h"
+#include"scanboard.h"
+#include"calculatecombos.h"
+
+clock_t  startTime, endTime;
 using namespace std;
-//int dir[5][2] = {{0,0},{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
-string ss="";
-POINT ENDA={0,0},BEGINA={0,0};
-int maxn=0;
-int ans[5][6]={0};
-void dfs(int ball[5][6],POINT A,POINT B,string s,int c,int p,int f,int time){
-    End = clock();
-    if(End-Begin>time){
+string tmpmoveSequence="";
+POINT ENDPoint={0,0},BEGINPoint={0,0};
+int maxScore=0;
+int finalGrid[5][6]={0};
+void dfs(int ballGrid[5][6],POINT startPoint,POINT currentPoint,string s,int currentDepth,int maxDepth,int flag,int timeLimit){
+    endTime = clock();
+    if(endTime-startTime>timeLimit){
 
     }
-    else if(c==p){
+    else if(currentDepth==maxDepth){
         int temp[5][6]={0};
-        POINT CA=A;
-        ball_copy(temp,ball);
+        POINT copystartPoint=startPoint;
+        copyBalls(temp,ballGrid);
         for(int i=0;i<s.length();i++){
-            ball_move(temp,&CA,s[i]-'0');
+            ball_move(temp,&copystartPoint,s[i]-'0');
         }
 
 
-        int num=ball_cnum(temp,f);
-        if(maxn<num){
-            maxn=num;
-            ball_copy(ans,temp);
-            BEGINA=A;
-            ENDA=CA;
-            ss=s;
+        int score=calculateBallNumber(temp,flag);
+        if(maxScore<score){
+            maxScore=score;
+            copyBalls(finalGrid,temp);
+            BEGINPoint=startPoint;
+            ENDPoint=copystartPoint;
+            tmpmoveSequence=s;
         }
     }
     else{
-        int d=0,len=s.length();
+        int oppositeDirection=0,sequenceLength=s.length();
         char k=5;
-        if(len!=0){
-                k=s[len-1];
-                d=k-'0';
-                d+=2;
-                if(d>4)d-4;
+        if(sequenceLength!=0){
+                k=s[sequenceLength-1];
+                oppositeDirection=k-'0';
+                oppositeDirection+=2;
+                if(oppositeDirection>4)oppositeDirection-4;
         }
 
-        /*for(int i=1;i<5;i++){
-            if(i!=d&&ball_checkrange(B.y+dir[i][1],B.x+dir[i][0])){
-
-                string t=s+char('0'+i);
-                POINT C=POINT{B.x+dir[i][0],B.y+dir[i][1]};
-                dfs(ball,A,C,t,c+1,p,f);
-            }
-        }*/
-        int ch[5]={1,0,0,0,0};
-        while(ch[1]!=1||ch[2]!=1||ch[3]!=1||ch[4]!=1){
+        int directionChecked[5]={1,0,0,0,0};
+        while(directionChecked[1]!=1||directionChecked[2]!=1||directionChecked[3]!=1||directionChecked[4]!=1){
             int i = rand()%4+1;
 
-            if(ch[i]==0&&i!=d&&ball_checkrange(B.y+dir[i][1],B.x+dir[i][0])){
+            if(directionChecked[i]==0&&i!=oppositeDirection&&isBallInRange(currentPoint.y+directions[i][1],currentPoint.x+directions[i][0])){
 
                 string t=s+char('0'+i);
-                POINT C=POINT{B.x+dir[i][0],B.y+dir[i][1]};
-                dfs(ball,A,C,t,c+1,p,f,time);
+                POINT C=POINT{currentPoint.x+directions[i][0],currentPoint.y+directions[i][1]};
+                dfs(ballGrid,startPoint,C,t,currentDepth+1,maxDepth,flag,timeLimit);
             }
-            ch[i]=1;
+            directionChecked[i]=1;
 
         }
     }
@@ -73,24 +66,23 @@ void dfs(int ball[5][6],POINT A,POINT B,string s,int c,int p,int f,int time){
 }
 int main(){
     system("mode con cols=40 lines=18");
-    POINT a,b,p,d,t;
-    int flag=1;
-    scanabp(&a,&b,&t);
+    POINT topLeft,bottomRight,clickPoint,gridDimension,tetminalPoint;
+    int continueFlag=1;
+    scanBoardPoints(&topLeft,&bottomRight,&tetminalPoint);
     srand( time(NULL) );
 
 
-    while(flag){
+    while(continueFlag){
 
         system("cls");
-        d.x=(b.x-a.x)/6;
-        d.y=(b.y-a.y)/5;
+        gridDimension.x=(bottomRight.x-topLeft.x)/6;
+        gridDimension.y=(bottomRight.y-topLeft.y)/5;
 
-        int ball[5][6]={0};
-        int temp[5][6]={0};
-        int ball_num[6]={0};
-        //Sleep(3000);
-        scanball(ball,a,b);
-        ball_print(ball);
+        int ballGrid[5][6]={0};
+        int tempGrid[5][6]={0};
+
+        scanBallGrid(ballGrid,topLeft,bottomRight);
+        printBalls(ballGrid);
         cout<<"確定'Enter' 重新截圖 'R' 離開 'Esc'"<<endl<<endl;
         while(1){
             int ch;
@@ -101,92 +93,88 @@ int main(){
                 }
                 if (ch == 'R'||ch == 'r'){
                     system("cls");
-                    scanball(ball,a,b);
-                    ball_print(ball);
+                    scanBallGrid(ballGrid,topLeft,bottomRight);
+                    printBalls(ballGrid);
                     cout<<"確定'Enter' 重新截圖 'R' 離開 'Esc'"<<endl<<endl;
 
                 }
                 if (ch ==  VK_ESCAPE){
                     system("cls");
-                    flag=0;
+                    continueFlag=0;
                     break;
                 }
             }
         }
-        if(!flag)break;
+        if(!continueFlag)break;
 
         system("cls");
-        string S="";
-        ball_copy(temp,ball);
-        maxn=0;
-        S="";
-        POINT A={0,0},B={0,0};
-
-        ball_print(ball);
-
-        int maxa=0;
+        string totalmoveSequence="";
+        copyBalls(tempGrid,ballGrid);
+        maxScore=0;
+        POINT startPoint={0,0},endPoint={0,0};
+        printBalls(ballGrid);
 
         for(int i=0;i<5;i++){
             for(int j=0;j<6;j++){
-                ball_copy(temp,ball);
-                A={i,j};
+                copyBalls(tempGrid,ballGrid);
+                startPoint={i,j};
                 for(int k=1;k<12;k++){
-                    Begin = clock();
-                    dfs(temp,A,A,"",0,k,1,100);
+                    startTime = clock();
+                    dfs(tempGrid,startPoint,startPoint,"",0,k,1,100);
                 }
             }
         }
 
-        B=BEGINA;
-        A=ENDA;
-        ball_copy(temp,ans);
-        cout<<"Y="<<B.x<<" X="<<B.y<<" 方向"<<0<<" 第"<<0<<"步"<<endl<<endl<<endl;
-        cout<<ss<<endl;
-        S+=ss;
+        endPoint=BEGINPoint;
+        startPoint=ENDPoint;
+        copyBalls(tempGrid,finalGrid);
+        cout<<"Y="<<endPoint.x<<" X="<<endPoint.y<<" 方向"<<0<<" 第"<<0<<"步"<<endl<<endl<<endl;
+        cout<<tmpmoveSequence<<endl;
+        totalmoveSequence+=tmpmoveSequence;
 
 
         while(1){
-            string T=ss;
+            string T=tmpmoveSequence;
 
             for(int i=1;i<33;i++){
-                Begin = clock();
-                dfs(temp,A,A,"",0,i,1,100);
+                startTime = clock();
+                dfs(tempGrid,startPoint,startPoint,"",0,i,1,100);
             }
 
-            if(ss==T||S.length()>90)break;
-            ball_copy(temp,ans);
-            A=ENDA;
-            cout<<ss<<endl;
-            if(ss==T||ss.length()+S.length()>90)break;
-            S+=ss;
+            if(tmpmoveSequence==T||totalmoveSequence.length()>90)break;
+            copyBalls(tempGrid,finalGrid);
+            startPoint=ENDPoint;
+            cout<<tmpmoveSequence<<endl;
+            if(tmpmoveSequence==T||tmpmoveSequence.length()+totalmoveSequence.length()>90)break;
+            totalmoveSequence+=tmpmoveSequence;
         }
 
-        p.x=a.x+d.x/2+d.x*B.x;
-        p.y=a.y+d.y/2+d.y*B.y;
-        SetCursorPos(p.x,p.y);
+        clickPoint.x=topLeft.x+gridDimension.x/2+gridDimension.x*endPoint.x;
+        clickPoint.y=topLeft.y+gridDimension.y/2+gridDimension.y*endPoint.y;
+        SetCursorPos(clickPoint.x,clickPoint.y);
 
-        A=B;
+        startPoint=endPoint;
         //mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
         Sleep(400);
         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
         Sleep(600);
-        for(int i=0;i<S.length();i++){
+        for(int i=0;i<totalmoveSequence.length();i++){
 
                 Sleep(50);
-                point_move(&p,d,S[i]-'0');
-                ball_move(ball,&A,S[i]-'0');
-                gotoxy(0,0);
-                ball_print(ball);
-                cout<<"Y="<<A.x<<" X="<<A.y<<" 方向"<<S[i]<<" 第"<<i+1<<"步"<<endl;
+                moveCursor(&clickPoint,gridDimension,totalmoveSequence[i]-'0');
+                ball_move(ballGrid,&startPoint,totalmoveSequence[i]-'0');
+                setConsolePosition(0,0);
+                printBalls(ballGrid);
+                cout<<"Y="<<startPoint.x<<" X="<<startPoint.y<<" 方向"<<totalmoveSequence[i]<<" 第"<<i+1<<"步"<<endl;
         }
         Sleep(50);
-        SetCursorPos(p.x+20,p.y+20);
+        SetCursorPos(clickPoint.x+20,clickPoint.y+20);
         mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
 
-        SetCursorPos(t.x,t.y);
+        SetCursorPos(tetminalPoint.x,tetminalPoint.y);
         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
         mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-        cout<<cmb(ball)<<"combo "<<endl<<endl;
+        cout<<calculatecombos(ballGrid)<<"combo "<<endl<<endl;
 
         cout<<"繼續'Enter' 離開 'Esc'";
 
@@ -199,7 +187,7 @@ int main(){
                 }
                 if (ch ==  VK_ESCAPE){
                     system("cls");
-                    flag=0;
+                    continueFlag=0;
                     break;
                 }
             }
